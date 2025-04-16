@@ -23,12 +23,12 @@ def print_trading_output(result: dict) -> None:
     """
     decisions = result.get("decisions")
     if not decisions:
-        print(f"{Fore.RED}No trading decisions available{Style.RESET_ALL}")
+        print(f"{Fore.RED}沒有可用的交易決策{Style.RESET_ALL}")
         return
 
     # Print decisions for each ticker
     for ticker, decision in decisions.items():
-        print(f"\n{Fore.WHITE}{Style.BRIGHT}Analysis for {Fore.CYAN}{ticker}{Style.RESET_ALL}")
+        print(f"\n{Fore.WHITE}{Style.BRIGHT}分析結果 {Fore.CYAN}{ticker}{Style.RESET_ALL}")
         print(f"{Fore.WHITE}{Style.BRIGHT}{'=' * 50}{Style.RESET_ALL}")
 
         # Prepare analyst signals table for this ticker
@@ -44,12 +44,20 @@ def print_trading_output(result: dict) -> None:
             signal = signals[ticker]
             agent_name = agent.replace("_agent", "").replace("_", " ").title()
             signal_type = signal.get("signal", "").upper()
+            # 將信號類型翻譯為中文
+            if signal_type == "BULLISH":
+                signal_type = "看漲"
+            elif signal_type == "BEARISH":
+                signal_type = "看跌"
+            elif signal_type == "NEUTRAL":
+                signal_type = "中性"
+            
             confidence = signal.get("confidence", 0)
 
             signal_color = {
-                "BULLISH": Fore.GREEN,
-                "BEARISH": Fore.RED,
-                "NEUTRAL": Fore.YELLOW,
+                "看漲": Fore.GREEN,
+                "看跌": Fore.RED,
+                "中性": Fore.YELLOW,
             }.get(signal_type, Fore.WHITE)
             
             # Get reasoning if available
@@ -98,11 +106,11 @@ def print_trading_output(result: dict) -> None:
         # Sort the signals according to the predefined order
         table_data = sort_agent_signals(table_data)
 
-        print(f"\n{Fore.WHITE}{Style.BRIGHT}AGENT ANALYSIS:{Style.RESET_ALL} [{Fore.CYAN}{ticker}{Style.RESET_ALL}]")
+        print(f"\n{Fore.WHITE}{Style.BRIGHT}分析師分析:{Style.RESET_ALL} [{Fore.CYAN}{ticker}{Style.RESET_ALL}]")
         print(
             tabulate(
                 table_data,
-                headers=[f"{Fore.WHITE}Agent", "Signal", "Confidence", "Reasoning"],
+                headers=[f"{Fore.WHITE}分析師", "信號", "置信度", "分析理由"],
                 tablefmt="grid",
                 colalign=("left", "center", "right", "left"),
             )
@@ -110,6 +118,20 @@ def print_trading_output(result: dict) -> None:
 
         # Print Trading Decision Table
         action = decision.get("action", "").upper()
+        # 將交易動作翻譯為中文
+        if action == "BUY":
+            action_display = "買入"
+        elif action == "SELL":
+            action_display = "賣出"
+        elif action == "HOLD":
+            action_display = "持有"
+        elif action == "COVER":
+            action_display = "回補"
+        elif action == "SHORT":
+            action_display = "做空"
+        else:
+            action_display = action
+            
         action_color = {
             "BUY": Fore.GREEN,
             "SELL": Fore.RED,
@@ -139,20 +161,20 @@ def print_trading_output(result: dict) -> None:
                 wrapped_reasoning += current_line
 
         decision_data = [
-            ["Action", f"{action_color}{action}{Style.RESET_ALL}"],
-            ["Quantity", f"{action_color}{decision.get('quantity')}{Style.RESET_ALL}"],
+            ["交易動作", f"{action_color}{action_display}{Style.RESET_ALL}"],
+            ["數量", f"{action_color}{decision.get('quantity')}{Style.RESET_ALL}"],
             [
-                "Confidence",
+                "置信度",
                 f"{Fore.WHITE}{decision.get('confidence'):.1f}%{Style.RESET_ALL}",
             ],
-            ["Reasoning", f"{Fore.WHITE}{wrapped_reasoning}{Style.RESET_ALL}"],
+            ["決策理由", f"{Fore.WHITE}{wrapped_reasoning}{Style.RESET_ALL}"],
         ]
         
-        print(f"\n{Fore.WHITE}{Style.BRIGHT}TRADING DECISION:{Style.RESET_ALL} [{Fore.CYAN}{ticker}{Style.RESET_ALL}]")
+        print(f"\n{Fore.WHITE}{Style.BRIGHT}交易決策:{Style.RESET_ALL} [{Fore.CYAN}{ticker}{Style.RESET_ALL}]")
         print(tabulate(decision_data, tablefmt="grid", colalign=("left", "left")))
 
     # Print Portfolio Summary
-    print(f"\n{Fore.WHITE}{Style.BRIGHT}PORTFOLIO SUMMARY:{Style.RESET_ALL}")
+    print(f"\n{Fore.WHITE}{Style.BRIGHT}投資組合摘要:{Style.RESET_ALL}")
     portfolio_data = []
     
     # Extract portfolio manager reasoning (common for all tickers)
@@ -164,6 +186,20 @@ def print_trading_output(result: dict) -> None:
             
     for ticker, decision in decisions.items():
         action = decision.get("action", "").upper()
+        # 將交易動作翻譯為中文
+        if action == "BUY":
+            action_display = "買入"
+        elif action == "SELL":
+            action_display = "賣出"
+        elif action == "HOLD":
+            action_display = "持有"
+        elif action == "COVER":
+            action_display = "回補"
+        elif action == "SHORT":
+            action_display = "做空"
+        else:
+            action_display = action
+            
         action_color = {
             "BUY": Fore.GREEN,
             "SELL": Fore.RED,
@@ -174,13 +210,13 @@ def print_trading_output(result: dict) -> None:
         portfolio_data.append(
             [
                 f"{Fore.CYAN}{ticker}{Style.RESET_ALL}",
-                f"{action_color}{action}{Style.RESET_ALL}",
+                f"{action_color}{action_display}{Style.RESET_ALL}",
                 f"{action_color}{decision.get('quantity')}{Style.RESET_ALL}",
                 f"{Fore.WHITE}{decision.get('confidence'):.1f}%{Style.RESET_ALL}",
             ]
         )
 
-    headers = [f"{Fore.WHITE}Ticker", "Action", "Quantity", "Confidence"]
+    headers = [f"{Fore.WHITE}股票代碼", "交易動作", "數量", "置信度"]
     
     # Print the portfolio summary table
     print(
@@ -222,7 +258,7 @@ def print_trading_output(result: dict) -> None:
         if current_line:
             wrapped_reasoning += current_line
             
-        print(f"\n{Fore.WHITE}{Style.BRIGHT}Portfolio Strategy:{Style.RESET_ALL}")
+        print(f"\n{Fore.WHITE}{Style.BRIGHT}投資組合策略:{Style.RESET_ALL}")
         print(f"{Fore.CYAN}{wrapped_reasoning}{Style.RESET_ALL}")
 
 
@@ -245,25 +281,25 @@ def print_backtest_results(table_rows: list) -> None:
     # Display latest portfolio summary
     if summary_rows:
         latest_summary = summary_rows[-1]
-        print(f"\n{Fore.WHITE}{Style.BRIGHT}PORTFOLIO SUMMARY:{Style.RESET_ALL}")
+        print(f"\n{Fore.WHITE}{Style.BRIGHT}投資組合摘要:{Style.RESET_ALL}")
 
         # Extract values and remove commas before converting to float
         cash_str = latest_summary[7].split("$")[1].split(Style.RESET_ALL)[0].replace(",", "")
         position_str = latest_summary[6].split("$")[1].split(Style.RESET_ALL)[0].replace(",", "")
         total_str = latest_summary[8].split("$")[1].split(Style.RESET_ALL)[0].replace(",", "")
 
-        print(f"Cash Balance: {Fore.CYAN}${float(cash_str):,.2f}{Style.RESET_ALL}")
-        print(f"Total Position Value: {Fore.YELLOW}${float(position_str):,.2f}{Style.RESET_ALL}")
-        print(f"Total Value: {Fore.WHITE}${float(total_str):,.2f}{Style.RESET_ALL}")
-        print(f"Return: {latest_summary[9]}")
+        print(f"現金餘額: {Fore.CYAN}${float(cash_str):,.2f}{Style.RESET_ALL}")
+        print(f"持倉總值: {Fore.YELLOW}${float(position_str):,.2f}{Style.RESET_ALL}")
+        print(f"總資產: {Fore.WHITE}${float(total_str):,.2f}{Style.RESET_ALL}")
+        print(f"收益率: {latest_summary[9]}")
         
         # Display performance metrics if available
         if latest_summary[10]:  # Sharpe ratio
-            print(f"Sharpe Ratio: {latest_summary[10]}")
+            print(f"夏普比率: {latest_summary[10]}")
         if latest_summary[11]:  # Sortino ratio
-            print(f"Sortino Ratio: {latest_summary[11]}")
+            print(f"索提諾比率: {latest_summary[11]}")
         if latest_summary[12]:  # Max drawdown
-            print(f"Max Drawdown: {latest_summary[12]}")
+            print(f"最大回撤: {latest_summary[12]}")
 
     # Add vertical spacing
     print("\n" * 2)
@@ -273,16 +309,16 @@ def print_backtest_results(table_rows: list) -> None:
         tabulate(
             ticker_rows,
             headers=[
-                "Date",
-                "Ticker",
-                "Action",
-                "Quantity",
-                "Price",
-                "Shares",
-                "Position Value",
-                "Bullish",
-                "Bearish",
-                "Neutral",
+                "日期",
+                "股票代碼",
+                "交易動作",
+                "數量",
+                "價格",
+                "持有股數",
+                "持倉價值",
+                "看漲數",
+                "看跌數",
+                "中性數",
             ],
             tablefmt="grid",
             colalign=(
@@ -333,12 +369,26 @@ def format_backtest_row(
         "SHORT": Fore.RED,
         "HOLD": Fore.WHITE,
     }.get(action.upper(), Fore.WHITE)
+    
+    # 將交易動作翻譯為中文
+    if action.upper() == "BUY":
+        action_display = "買入"
+    elif action.upper() == "SELL":
+        action_display = "賣出"
+    elif action.upper() == "HOLD":
+        action_display = "持有"
+    elif action.upper() == "COVER":
+        action_display = "回補"
+    elif action.upper() == "SHORT":
+        action_display = "做空"
+    else:
+        action_display = action.upper()
 
     if is_summary:
         return_color = Fore.GREEN if return_pct >= 0 else Fore.RED
         return [
             date,
-            f"{Fore.WHITE}{Style.BRIGHT}PORTFOLIO SUMMARY{Style.RESET_ALL}",
+            f"{Fore.WHITE}{Style.BRIGHT}投資組合摘要{Style.RESET_ALL}",
             "",  # Action
             "",  # Quantity
             "",  # Price
@@ -355,7 +405,7 @@ def format_backtest_row(
         return [
             date,
             f"{Fore.CYAN}{ticker}{Style.RESET_ALL}",
-            f"{action_color}{action.upper()}{Style.RESET_ALL}",
+            f"{action_color}{action_display}{Style.RESET_ALL}",
             f"{action_color}{quantity:,.0f}{Style.RESET_ALL}",
             f"{Fore.WHITE}{price:,.2f}{Style.RESET_ALL}",
             f"{Fore.WHITE}{shares_owned:,.0f}{Style.RESET_ALL}",

@@ -4,6 +4,7 @@ import json
 from typing import TypeVar, Type, Optional, Any
 from pydantic import BaseModel
 from utils.progress import progress
+import time
 
 T = TypeVar('T', bound=BaseModel)
 
@@ -14,7 +15,8 @@ def call_llm(
     pydantic_model: Type[T],
     agent_name: Optional[str] = None,
     max_retries: int = 3,
-    default_factory = None
+    default_factory = None,
+    timeout: int = 60  # 添加超時參數，默認60秒
 ) -> T:
     """
     Makes an LLM call with retry logic, handling both JSON supported and non-JSON supported models.
@@ -27,6 +29,7 @@ def call_llm(
         agent_name: Optional name of the agent for progress updates
         max_retries: Maximum number of retries (default: 3)
         default_factory: Optional factory function to create default response on failure
+        timeout: Timeout in seconds for each LLM call (default: 60)
         
     Returns:
         An instance of the specified Pydantic model
@@ -46,8 +49,29 @@ def call_llm(
     # Call the LLM with retries
     for attempt in range(max_retries):
         try:
-            # Call the LLM
-            result = llm.invoke(prompt)
+            if agent_name:
+                progress.update_status(agent_name, None, f"調用AI模型中... {attempt + 1}/{max_retries}")
+                
+            # 設定超時處理
+            start_time = time.time()
+            result = None
+            
+            # 使用超時邏輯調用LLM
+            while time.time() - start_time < timeout:
+                try:
+                    # Call the LLM
+                    result = llm.invoke(prompt)
+                    break
+                except Exception as timeout_e:
+                    # 檢查是否已超時
+                    if time.time() - start_time >= timeout:
+                        raise timeout_e
+                    # 短暫等待後重試
+                    time.sleep(1)
+            
+            # 如果超時後仍未獲得結果
+            if result is None:
+                raise TimeoutError(f"LLM call timed out after {timeout} seconds")
             
             # For non-JSON support models, we need to extract and parse the JSON manually
             if model_info and not model_info.has_json_mode():
@@ -59,10 +83,10 @@ def call_llm(
                 
         except Exception as e:
             if agent_name:
-                progress.update_status(agent_name, None, f"Error - retry {attempt + 1}/{max_retries}")
+                progress.update_status(agent_name, None, f"錯誤 - 重試 {attempt + 1}/{max_retries}")
             
             if attempt == max_retries - 1:
-                print(f"Error in LLM call after {max_retries} attempts: {e}")
+                print(f"LLM調用在{max_retries}次嘗試後出錯: {e}")
                 # Use default_factory if provided, otherwise create a basic default
                 if default_factory:
                     return default_factory()
